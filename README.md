@@ -41,3 +41,7 @@ The file is structured like:
 2. Zstandard compressed CBOR payload (`uint32_le(len(cbor)) + uint32_le(2) + zstd‑frame(cbor-bytes)`)
 
 Check the implementation for details. Yet unclear is the CBOR data itself. We can unpack and modify what is there, but what are valid properties is unknown. You can probably enumerate by unpacking all preset files you can find and eventually come across all possible values.
+
+## Related Projects
+
+- [node-serum2-preset-packager](https://github.com/CharlesBT/node-serum2-preset-packager) - based on this research, CLI and TypeScript, Node API.
