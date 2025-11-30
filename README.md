@@ -32,6 +32,21 @@ python cli.py pack MyPreset.json MyPreset.SerumPreset
 
 This will produce a valid `SerumPreset` that you can load into Serum 2.
 
+### Edit
+
+The edit command provides a convenient way to modify a preset file in one step. It unpacks the preset to a temporary JSON file, opens it in your editor, and automatically packs it back when you save and exit.
+
+```shell
+python cli.py edit MyPreset.SerumPreset
+```
+
+This will:
+1. Unpack the preset to a temporary JSON file
+2. Open the file in your `$EDITOR` (defaults to `vi` if not set)
+3. Wait for you to save and close the editor
+4. Pack the modified JSON back to the original preset file
+5. Clean up the temporary file automatically
+
 ## File Format
 
 Kudos to [@0xdevalias](https://github.com/0xdevalias) for [his Gist](https://gist.github.com/0xdevalias/5a06349b376d01b2a76ad27a86b08c1b) on the reverse engineering of the preset file format. That sparked my interest to look further into it.

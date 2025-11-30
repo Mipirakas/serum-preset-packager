@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import sys, json, struct, pathlib, cbor2, zstandard as zstd
+import sys, json, struct, pathlib, cbor2, zstandard as zstd, os, tempfile, subprocess
 
 MAGIC = b"XferJson\x00"
 
@@ -26,9 +26,40 @@ def pack(src: pathlib.Path, dst: pathlib.Path):
     out += z
     dst.write_bytes(out)
 
+def edit(preset: pathlib.Path):
+    editor = os.environ.get("EDITOR", "vi")
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
+        tmp_path = pathlib.Path(tmp.name)
+
+    try:
+        # Unpack preset to temporary JSON file
+        unpack(preset, tmp_path)
+
+        # Open editor
+        subprocess.run([editor, str(tmp_path)], check=True)
+
+        # Pack modified JSON back to preset
+        pack(tmp_path, preset)
+    finally:
+        # Clean up temporary file
+        tmp_path.unlink(missing_ok=True)
+
 if __name__ == "__main__":
-    if len(sys.argv) != 4 or sys.argv[1] not in {"unpack", "pack"}:
+    if len(sys.argv) < 2 or sys.argv[1] not in {"unpack", "pack", "edit"}:
         print("usage: cli.py unpack <file.SerumPreset> <out.json>\n"
-              "       cli.py pack   <in.json>         <out.SerumPreset>")
+              "       cli.py pack   <in.json>         <out.SerumPreset>\n"
+              "       cli.py edit   <file.SerumPreset>")
         sys.exit(1)
-    (unpack if sys.argv[1] == "unpack" else pack)(pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3]))
+
+    cmd = sys.argv[1]
+
+    if cmd == "edit":
+        if len(sys.argv) != 3:
+            print("usage: cli.py edit <file.SerumPreset>")
+            sys.exit(1)
+        edit(pathlib.Path(sys.argv[2]))
+    else:
+        if len(sys.argv) != 4:
+            print("usage: cli.py {} <input> <output>".format(cmd))
+            sys.exit(1)
+        (unpack if cmd == "unpack" else pack)(pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3]))
