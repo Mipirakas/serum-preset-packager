@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
 import sys, json, struct, pathlib, cbor2, zstandard as zstd, os, tempfile, subprocess
+from typing import Any
 
 MAGIC = b"XferJson\x00"
 
-def unpack(src: pathlib.Path, dst: pathlib.Path):
-    buf = src.read_bytes()
+def decodeFromSerumPreset(buf: bytes):
     off = len(MAGIC)
     jlen, _ = struct.unpack_from("<II", buf, off); off += 8
     meta = json.loads(buf[off:off + jlen]); off += jlen
     clen, _ = struct.unpack_from("<II", buf, off); off += 8
     cbor = zstd.ZstdDecompressor().decompress(buf[off:])
     assert len(cbor) == clen
-    dst.write_text(json.dumps({"metadata": meta, "data": cbor2.loads(cbor)}, indent=2))
+    return {"metadata": meta, "data": cbor2.loads(cbor)}
 
-def pack(src: pathlib.Path, dst: pathlib.Path):
-    obj = json.loads(src.read_text())
+def encodeToSerumPreset(obj: dict[str, Any]):
     m = json.dumps(obj["metadata"], separators=(",", ":")).encode()
     c = cbor2.dumps(obj["data"])
     z = zstd.ZstdCompressor(level=3).compress(c)
@@ -24,6 +23,16 @@ def pack(src: pathlib.Path, dst: pathlib.Path):
     out += m
     out += struct.pack("<II", len(c), 2)
     out += z
+    return out
+
+def unpack(src: pathlib.Path, dst: pathlib.Path):
+    buf = src.read_bytes()
+    data = decodeFromSerumPreset(buf)
+    dst.write_text(json.dumps(data, indent=2))
+
+def pack(src: pathlib.Path, dst: pathlib.Path):
+    obj = json.loads(src.read_text())
+    out = encodeToSerumPreset(obj)
     dst.write_bytes(out)
 
 def edit(preset: pathlib.Path):
