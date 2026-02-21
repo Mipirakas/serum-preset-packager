@@ -3,20 +3,22 @@ import sys, json, struct, pathlib, cbor2, zstandard as zstd, os, tempfile, subpr
 from typing import Any
 
 MAGIC = b"XferJson\x00"
+DECOMPRESSOR = zstd.ZstdDecompressor()
+COMPRESSOR = zstd.ZstdCompressor(level=3)
 
-def decodeFromSerumPreset(buf: bytes):
+def decodeFromSerumPreset(buf: bytes) -> dict[str, Any]:
     off = len(MAGIC)
     jlen, _ = struct.unpack_from("<II", buf, off); off += 8
     meta = json.loads(buf[off:off + jlen]); off += jlen
     clen, _ = struct.unpack_from("<II", buf, off); off += 8
-    cbor = zstd.ZstdDecompressor().decompress(buf[off:])
+    cbor = DECOMPRESSOR.decompress(buf[off:])
     assert len(cbor) == clen
     return {"metadata": meta, "data": cbor2.loads(cbor)}
 
-def encodeToSerumPreset(obj: dict[str, Any]):
+def encodeToSerumPreset(obj: dict[str, Any]) -> bytes:
     m = json.dumps(obj["metadata"], separators=(",", ":")).encode()
     c = cbor2.dumps(obj["data"])
-    z = zstd.ZstdCompressor(level=3).compress(c)
+    z = COMPRESSOR.compress(c)
     out = bytearray()
     out += MAGIC
     out += struct.pack("<II", len(m), 0)
